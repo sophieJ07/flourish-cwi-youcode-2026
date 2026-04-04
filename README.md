@@ -1,45 +1,75 @@
-# Shelter check-in (Next.js + Supabase)
+# Shelter check-in
 
-Two surfaces on **one Next.js app**: a **public kiosk** at `/` (tablet-friendly guest check-in) and a **staff area** at `/staff/*` (Supabase Auth + dashboard shell). Both use the same Supabase project.
+Next.js + Supabase: public kiosk at `/`, staff area at `/staff/*`.
 
 ## Setup
 
-1. Copy environment variables:
+```bash
+cp .env.example .env.local
+npm install
+npm run dev
+```
 
-   ```bash
-   cp .env.example .env.local
-   ```
+- Set `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` in `.env.local` (Supabase → Project Settings → API).
+- Supabase → Authentication → URL configuration: add redirect URL `http://localhost:3000/auth/callback` (and production when deployed).
+- Supabase → SQL editor: run `supabase/migrations/00001_mood_entries.sql` on a fresh DB for these tables.
+- Seed at least one shelter, e.g.:
 
-   Add your project URL and anon key from **Supabase → Project Settings → API**.
-
-2. In **Supabase → Authentication → URL configuration**, set **Site URL** to your app origin (e.g. `http://localhost:3000` in development) and add **Redirect URLs**:
-
-   - `http://localhost:3000/auth/callback`
-   - (production) `https://your-domain.com/auth/callback`
-
-3. Turn on whichever **Auth providers** you want (email, magic link, OAuth, etc.). The staff sign-in UI adapts to what you enable in the dashboard.
-
-4. Create the shared table and RLS policies by running the SQL in `supabase/migrations/00001_mood_entries.sql` in the Supabase SQL editor (or via the Supabase CLI if you use it). This allows **anonymous** inserts from the kiosk and **authenticated** reads for staff.
-
-5. Install and run:
-
-   ```bash
-   npm install
-   npm run dev
-   ```
-
-   - Kiosk: [http://localhost:3000](http://localhost:3000)
-   - Staff login: [http://localhost:3000/staff/login](http://localhost:3000/staff/login)
+```sql
+insert into public.shelters (name, access_code)
+values ('Main campus', 'your-secret-code');
+```
 
 ## Project layout
 
 | Path | Purpose |
 | --- | --- |
-| `src/app/(kiosk)/` | Public guest UI (no login) |
-| `src/app/(staff)/staff/` | Staff routes; middleware protects everything except `/staff/login` |
-| `src/app/auth/callback/route.ts` | OAuth / PKCE session exchange |
-| `src/middleware.ts` | Session refresh + gate for `/staff/*` |
+| `src/app/(kiosk)/` | Public kiosk UI |
+| `src/app/(staff)/staff/` | Staff routes (middleware protects except `/staff/login`) |
+| `src/app/auth/callback/route.ts` | Auth callback (OAuth / PKCE) |
+| `src/middleware.ts` | Session refresh; gate `/staff/*` |
 | `src/lib/supabase/` | Browser and server Supabase clients |
-| `supabase/migrations/` | SQL for shared tables |
+| `supabase/migrations/` | SQL schema |
 
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+## Database schema
+
+**`shelters`**
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | `uuid` | PK, default `gen_random_uuid()` |
+| `name` | `text` | |
+| `access_code` | `text` | `not null`, `unique` |
+
+**`mood_entries`**
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | `uuid` | PK, default `gen_random_uuid()` |
+| `shelter_id` | `uuid` | FK → `shelters(id)`, `on delete cascade` |
+| `mood_level` | `int` | `not null`, `check (1–5)` |
+| `created_at` | `timestamptz` | `not null`, default `now()` |
+
+Index: `(shelter_id, created_at desc)`.
+
+**`user_shelter_access`**
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `user_id` | `uuid` | FK → `auth.users(id)`, `on delete cascade` |
+| `shelter_id` | `uuid` | FK → `shelters(id)`, `on delete cascade` |
+| | | PK `(user_id, shelter_id)` |
+
+**RPCs** (see migration for definitions)
+
+| Name | Called by | Role |
+| --- | --- | --- |
+| `validate_kiosk_access` | Kiosk | `anon`, `authenticated` |
+| `submit_mood_checkin` | Kiosk | `anon`, `authenticated` |
+| `claim_shelter_access` | Staff UI | `authenticated` |
+
+**RLS** (all three tables enabled)
+
+- **`shelters`**: `authenticated` can `select` rows for shelters unlocked in `user_shelter_access`.
+- **`user_shelter_access`**: `authenticated` can `select` own rows (`user_id = auth.uid()`).
+- **`mood_entries`**: `authenticated` can `select` rows whose `shelter_id` is unlocked for them. Inserts go through `submit_mood_checkin` only (security definer), not direct client `insert`.

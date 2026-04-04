@@ -18,7 +18,8 @@ export default function KioskHomePage() {
           How are you feeling today?
         </h1>
         <p className="mt-3 text-lg text-slate-600">
-          Tap an option below. You can add a short note if you want.
+          Tap how you feel (1–5). Staff sets up this tablet with a shelter code
+          once per session.
         </p>
       </header>
       <KioskCheckIn />

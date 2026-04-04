@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { SignOutButton } from "@/components/staff/sign-out-button";
+import { StaffShelterClaim } from "@/components/staff/staff-shelter-claim";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
@@ -10,20 +11,33 @@ export const metadata: Metadata = {
 type MoodRow = {
   id: string;
   created_at: string;
-  mood_label: string;
-  note: string | null;
+  mood_level: number;
+  shelter_id: string;
+  shelters: { name: string | null } | null;
 };
 
 export default async function StaffDashboardPage() {
   const supabase = await createServerSupabaseClient();
+
+  const { count: accessCount, error: accessError } = await supabase
+    .from("user_shelter_access")
+    .select("*", { count: "exact", head: true });
+
   const { data, error } = await supabase
     .from("mood_entries")
-    .select("id, created_at, mood_label, note")
+    .select("id, created_at, mood_level, shelter_id, shelters(name)")
     .order("created_at", { ascending: false })
     .limit(100);
 
   const rows = data as MoodRow[] | null;
   const loadError = error?.message ?? null;
+  const accessHasError = Boolean(
+    accessError?.message &&
+      (accessError.message.includes("relation") ||
+        accessError.message.includes("does not exist")),
+  );
+  const hasAccess =
+    !accessHasError && accessCount != null && accessCount > 0;
 
   return (
     <div className="min-h-full">
@@ -50,14 +64,18 @@ export default async function StaffDashboardPage() {
       </header>
 
       <main className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
+        <div className="mb-8">
+          <StaffShelterClaim />
+        </div>
+
         <section className="rounded-2xl border border-dashed border-slate-200 bg-amber-50/50 p-6 text-slate-700">
           <h2 className="font-semibold text-slate-900">Suggestions</h2>
           <p className="mt-2 text-sm leading-relaxed">
             This area is ready for charts, trends, and AI-assisted suggestions
-            built on top of the same <code className="text-slate-800">mood_entries</code>{" "}
-            data. Connect your Supabase project and apply the SQL migration in{" "}
-            <code className="text-slate-800">supabase/migrations</code> to start
-            collecting rows from the tablet.
+            built on <code className="text-slate-800">mood_entries</code>{" "}
+            (with{" "}
+            <code className="text-slate-800">mood_level</code> 1–5 per
+            shelter).
           </p>
         </section>
 
@@ -68,14 +86,15 @@ export default async function StaffDashboardPage() {
           {loadError && (
             <p className="mt-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-800">
               {loadError.includes("relation") || loadError.includes("does not exist")
-                ? "The mood_entries table is missing. Run the migration in supabase/migrations on your Supabase database."
+                ? "Database tables are missing or outdated. Run supabase/migrations/00001_mood_entries.sql in the SQL editor."
                 : loadError}
             </p>
           )}
           {!loadError && (!rows || rows.length === 0) && (
             <p className="mt-4 text-slate-600">
-              No entries yet. Entries from the kiosk will appear here for signed-in
-              staff.
+              {hasAccess
+                ? "No entries yet for the shelters linked to your account."
+                : "Unlock a shelter with an access code to see check-ins from the kiosk."}
             </p>
           )}
           {!loadError && rows && rows.length > 0 && (
@@ -86,10 +105,12 @@ export default async function StaffDashboardPage() {
                   className="flex flex-col gap-1 px-4 py-3 sm:flex-row sm:items-start sm:justify-between"
                 >
                   <div>
-                    <p className="font-medium text-slate-900">{row.mood_label}</p>
-                    {row.note && (
-                      <p className="mt-0.5 text-sm text-slate-600">{row.note}</p>
-                    )}
+                    <p className="font-medium text-slate-900">
+                      Mood {row.mood_level}/5
+                      {row.shelters?.name != null && row.shelters.name !== ""
+                        ? ` · ${row.shelters.name}`
+                        : ""}
+                    </p>
                   </div>
                   <time
                     dateTime={row.created_at}
