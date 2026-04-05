@@ -3,9 +3,14 @@
 import Link from "next/link";
 import { useCallback, useState, useTransition } from "react";
 import { generateStaffActivitySuggestions } from "@/app/actions/staff-ai-activity-suggestions";
+import type { LongInsightsSnapshot } from "@/lib/insights/long-term-insights";
 import type { ShortInsightsSnapshot } from "@/lib/insights/short-term-insights";
-import type { ShortTimeRange } from "@/lib/insights/time-range";
-import { padStatSlots, type StatRow } from "@/lib/insights/stats-helpers";
+import {
+  padStatSlots,
+  type MeanLikertStat,
+  type StatRow,
+} from "@/lib/insights/stats-helpers";
+import type { LongTimeRange, ShortTimeRange } from "@/lib/insights/time-range";
 
 /** Circle fills sampled to match `/public/assets/mood/*.png` icons. */
 const MOOD_TILE_STYLES: Record<
@@ -63,12 +68,117 @@ const MOOD_TILE_BG: Record<string, string> = {
 const AI_SUGGESTION_ROW =
   "rounded-lg border border-[#6b3d40]/25 bg-[#9a6d70] px-3 py-3 text-base font-medium text-white shadow-sm";
 
+const SECTION_PANEL =
+  "rounded-2xl border border-[var(--staff-ink)]/10 bg-[#f0d6dc]/50 px-4 py-4 shadow-sm sm:px-5 sm:py-5";
+
 type Props = {
   term: "short" | "long";
   range: ShortTimeRange;
+  longRange: LongTimeRange;
   snapshot: ShortInsightsSnapshot | null;
+  longSnapshot: LongInsightsSnapshot | null;
   aiConfigured: boolean;
 };
+
+function MeanLikertRingCard({
+  title,
+  summary,
+}: {
+  title: string;
+  summary: MeanLikertStat | null;
+}) {
+  const arc = summary?.arcPct ?? 0;
+  const size = 176;
+  const stroke = 11;
+  const r = (size - stroke) / 2;
+  const c = 2 * Math.PI * r;
+  const dash = Math.max(0.01, (arc / 100) * c);
+  const gap = c - dash;
+
+  return (
+    <div className={`flex min-h-[14.5rem] flex-col ${SECTION_PANEL}`}>
+      <h3 className="text-base font-bold leading-snug text-[var(--staff-ink)]">
+        {title}
+      </h3>
+      <div className="flex flex-1 flex-col items-center justify-center py-4">
+        <div
+          className="relative shrink-0"
+          style={{ width: size, height: size }}
+        >
+          <svg
+            width={size}
+            height={size}
+            viewBox={`0 0 ${size} ${size}`}
+            className="absolute left-0 top-0 -rotate-90"
+            aria-hidden
+          >
+            <circle
+              cx={size / 2}
+              cy={size / 2}
+              r={r}
+              fill="none"
+              className="stroke-white/90"
+              strokeWidth={stroke}
+            />
+            <circle
+              cx={size / 2}
+              cy={size / 2}
+              r={r}
+              fill="none"
+              className="stroke-[var(--staff-accent)]"
+              strokeWidth={stroke}
+              strokeDasharray={summary ? `${dash} ${gap}` : `0 ${c}`}
+              strokeLinecap="round"
+            />
+          </svg>
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+            <p className="max-w-[9.5rem] px-2 text-center text-sm font-bold leading-tight text-[var(--staff-ink)]">
+              {summary ? summary.label : "—"}
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DistributionBars({
+  title,
+  rows,
+}: {
+  title: string;
+  rows: StatRow[];
+}) {
+  return (
+    <div className={`flex flex-col ${SECTION_PANEL}`}>
+      <h3 className="text-base font-bold leading-snug text-[var(--staff-ink)]">
+        {title}
+      </h3>
+      <ul className="mt-4 flex flex-col gap-3.5">
+        {rows.map((row) => (
+          <li key={row.label}>
+            <div className="flex items-baseline justify-between gap-2 text-sm">
+              <span className="min-w-0 flex-1 leading-snug text-[var(--staff-ink)]">
+                {row.label}
+              </span>
+              <span className="shrink-0 tabular-nums text-[var(--staff-ink)]/55">
+                {row.count > 0 ? `${row.pct}%` : "—"}
+              </span>
+            </div>
+            <div className="mt-1.5 h-2.5 overflow-hidden rounded-full bg-white/85">
+              <div
+                className="h-full min-w-px rounded-full bg-[var(--staff-accent)] transition-[width]"
+                style={{
+                  width: row.count > 0 ? `${Math.max(row.pct, 2)}%` : "0%",
+                }}
+              />
+            </div>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
 
 function SlotList({ rows }: { rows: (StatRow | null)[] }) {
   return (
@@ -98,7 +208,9 @@ function SlotList({ rows }: { rows: (StatRow | null)[] }) {
 export function StaffInsightsDashboard({
   term,
   range,
+  longRange,
   snapshot,
+  longSnapshot,
   aiConfigured,
 }: Props) {
   const [aiOn, setAiOn] = useState(false);
@@ -137,35 +249,64 @@ export function StaffInsightsDashboard({
     }
   };
 
-  const qs = (t: "short" | "long", r?: ShortTimeRange) => {
-    if (t === "long") return "/staff/dashboard?term=long";
+  const qs = (
+    tab: "short" | "long",
+    r?: ShortTimeRange,
+    lr?: LongTimeRange,
+  ) => {
+    if (tab === "long") {
+      return `/staff/dashboard?term=long&lrange=${lr ?? longRange}`;
+    }
     return `/staff/dashboard?term=short&range=${r ?? range}`;
   };
 
   return (
     <>
-      {/* Tabs */}
-      <div className="mt-6 flex flex-wrap gap-2 border-b border-[var(--staff-ink)]/10 pb-3">
-        <Link
-          href={qs("short", range)}
-          className={`rounded-full px-5 py-2.5 text-base font-semibold transition ${
-            term === "short"
-              ? "bg-[var(--staff-accent)] text-white shadow-sm"
-              : "bg-[var(--staff-input-bg)] text-[var(--staff-ink)] hover:opacity-90"
-          }`}
-        >
-          Short term
-        </Link>
-        <Link
-          href={qs("long")}
-          className={`rounded-full px-5 py-2.5 text-base font-semibold transition ${
-            term === "long"
-              ? "bg-[var(--staff-accent)] text-white shadow-sm"
-              : "bg-[var(--staff-input-bg)] text-[var(--staff-ink)] hover:opacity-90"
-          }`}
-        >
-          Long term
-        </Link>
+      <div className="mt-6 flex flex-col gap-3 border-b border-[var(--staff-ink)]/10 pb-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+        <div className="flex flex-wrap gap-2">
+          <Link
+            href={qs("short", range)}
+            className={`rounded-full px-5 py-2.5 text-base font-semibold transition ${
+              term === "short"
+                ? "bg-[var(--staff-accent)] text-white shadow-sm"
+                : "bg-[var(--staff-input-bg)] text-[var(--staff-ink)] hover:opacity-90"
+            }`}
+          >
+            Short term
+          </Link>
+          <Link
+            href={qs("long", undefined, longRange)}
+            className={`rounded-full px-5 py-2.5 text-base font-semibold transition ${
+              term === "long"
+                ? "bg-[var(--staff-accent)] text-white shadow-sm"
+                : "bg-[var(--staff-input-bg)] text-[var(--staff-ink)] hover:opacity-90"
+            }`}
+          >
+            Long term
+          </Link>
+        </div>
+        {term === "long" && (
+          <div className="flex flex-wrap gap-2 sm:justify-end">
+            {(
+              [
+                ["2w", "Last 2 weeks"],
+                ["1w", "Last week"],
+              ] as const
+            ).map(([key, label]) => (
+              <Link
+                key={key}
+                href={`/staff/dashboard?term=long&lrange=${key}`}
+                className={`rounded-full border-2 px-4 py-2 text-base font-medium transition sm:px-5 sm:py-2.5 ${
+                  longRange === key
+                    ? "border-[var(--staff-accent)] bg-[var(--staff-card)] text-[var(--staff-accent)]"
+                    : "border-transparent bg-[var(--staff-input-bg)] text-[var(--staff-ink)] hover:border-[var(--staff-ink)]/15"
+                }`}
+              >
+                {label}
+              </Link>
+            ))}
+          </div>
+        )}
       </div>
 
       {term === "short" && (
@@ -192,14 +333,79 @@ export function StaffInsightsDashboard({
         </div>
       )}
 
-      {term === "long" && (
-        <section className="mt-8 rounded-2xl border border-dashed border-[var(--staff-ink)]/20 bg-[var(--staff-card)]/80 p-10 text-center shadow-inner">
-          <h2 className="text-xl font-bold text-[var(--staff-ink)]">
-            Long-term insights
-          </h2>
-          <p className="mt-3 text-base text-[var(--staff-ink)]/60">
-            Longer windows and trends will appear here in a future update.
+      {term === "long" && longSnapshot && (
+        <section className="mt-8 rounded-2xl border border-[var(--staff-ink)]/10 bg-[var(--staff-card)] p-6 shadow-md sm:p-8">
+          <p className="text-sm font-medium text-[var(--staff-ink)]/55">
+            {longSnapshot.rangeLabel}
           </p>
+          <h2 className="mt-1 text-xl font-bold text-[var(--staff-ink)]">
+            Wellness Summary ({longSnapshot.total} total{" "}
+            {longSnapshot.total === 1 ? "response" : "responses"})
+          </h2>
+
+          {longSnapshot.total === 0 ? (
+            <p className="mt-8 py-6 text-center text-base text-[var(--staff-ink)]/50">
+              No long-form check-ins in this range yet.
+            </p>
+          ) : (
+            <>
+              <div className="mt-10">
+                <h2 className="border-b border-[var(--staff-ink)]/15 pb-2 text-lg font-bold text-[var(--staff-ink)]">
+                  Mind
+                </h2>
+                <div className="mt-5 grid gap-4 md:grid-cols-2 md:gap-5">
+                  <MeanLikertRingCard
+                    title={longSnapshot.copy.stressLeadIn}
+                    summary={longSnapshot.stressMean}
+                  />
+                  <DistributionBars
+                    title={longSnapshot.copy.hopefulLeadIn}
+                    rows={longSnapshot.hopefulDistribution}
+                  />
+                </div>
+              </div>
+
+              <div className="mt-10">
+                <h2 className="border-b border-[var(--staff-ink)]/15 pb-2 text-lg font-bold text-[var(--staff-ink)]">
+                  Body
+                </h2>
+                <div className="mt-5 grid gap-4 md:grid-cols-2 md:gap-5">
+                  <div className={SECTION_PANEL}>
+                    <h3 className="text-base font-bold text-[var(--staff-ink)]">
+                      {longSnapshot.copy.physicalLeadIn}
+                    </h3>
+                    <SlotList
+                      rows={padStatSlots(longSnapshot.physicalTop, 3)}
+                    />
+                  </div>
+                  <DistributionBars
+                    title={longSnapshot.copy.foodLeadIn}
+                    rows={longSnapshot.foodDistribution}
+                  />
+                </div>
+              </div>
+
+              <div className="mt-10">
+                <h2 className="border-b border-[var(--staff-ink)]/15 pb-2 text-lg font-bold text-[var(--staff-ink)]">
+                  Soul
+                </h2>
+                <div className="mt-5 grid gap-4 md:grid-cols-2 md:gap-5">
+                  <MeanLikertRingCard
+                    title={longSnapshot.copy.belongingLeadIn}
+                    summary={longSnapshot.belongingMean}
+                  />
+                  <div className={SECTION_PANEL}>
+                    <h3 className="text-base font-bold text-[var(--staff-ink)]">
+                      {longSnapshot.copy.programsLeadIn}
+                    </h3>
+                    <SlotList
+                      rows={padStatSlots(longSnapshot.programsTop, 3)}
+                    />
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
         </section>
       )}
 

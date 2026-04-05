@@ -4,8 +4,12 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { SignOutButton } from "@/components/staff/sign-out-button";
 import { StaffShellHeader } from "@/components/staff/staff-shell-header";
 import { StaffInsightsDashboard } from "@/components/staff/staff-insights-dashboard";
+import { getLongTermInsightsData } from "@/lib/insights/long-term-insights";
 import { getShortTermInsightsData } from "@/lib/insights/short-term-insights";
-import { parseShortTimeRange } from "@/lib/insights/time-range";
+import {
+  parseLongTimeRange,
+  parseShortTimeRange,
+} from "@/lib/insights/time-range";
 
 export const metadata: Metadata = {
   title: "Insights | Staff",
@@ -18,7 +22,7 @@ function shelterLocationPhrase(names: string[]): string {
   return `${names.slice(0, -1).join(", ")}, and ${names[names.length - 1]}`;
 }
 
-type SearchParams = Promise<{ term?: string; range?: string }>;
+type SearchParams = Promise<{ term?: string; range?: string; lrange?: string }>;
 
 export default async function StaffDashboardPage({
   searchParams,
@@ -28,6 +32,7 @@ export default async function StaffDashboardPage({
   const sp = await searchParams;
   const term = sp.term === "long" ? "long" : "short";
   const range = parseShortTimeRange(sp.range);
+  const longRange = parseLongTimeRange(sp.lrange);
 
   const supabase = await createServerSupabaseClient();
 
@@ -59,6 +64,8 @@ export default async function StaffDashboardPage({
 
   const shortData =
     term === "short" ? await getShortTermInsightsData(range) : null;
+  const longData =
+    term === "long" ? await getLongTermInsightsData(longRange) : null;
 
   const aiConfigured =
     process.env.AI_PROVIDER === "claude" &&
@@ -73,10 +80,12 @@ export default async function StaffDashboardPage({
         </h1>
 
         <StaffInsightsDashboard
-          key={`${term}-${range}`}
+          key={`${term}-${range}-${longRange}`}
           term={term}
           range={range}
+          longRange={longRange}
           snapshot={shortData?.snapshot ?? null}
+          longSnapshot={longData ?? null}
           aiConfigured={aiConfigured}
         />
       </main>
