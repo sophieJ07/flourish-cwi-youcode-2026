@@ -51,7 +51,7 @@ export function StaffAccessCodeView({
       setError("That code was not recognized.");
       return;
     }
-    router.push("/staff/dashboard");
+    router.push(`/staff/dashboard?shelter=${row.shelter_id}`);
     router.refresh();
   }
 

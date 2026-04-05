@@ -19,7 +19,12 @@ export type ActivitySuggestionsActionState =
 
 export async function generateStaffActivitySuggestions(
   range: ShortTimeRange,
+  shelterId: string,
 ): Promise<ActivitySuggestionsActionState> {
+  if (!shelterId?.trim()) {
+    return { ok: false, error: "No shelter selected." };
+  }
+
   if (!isAiEnabled()) {
     return {
       ok: false,
@@ -45,7 +50,7 @@ export async function generateStaffActivitySuggestions(
   }
 
   try {
-    const { aggregated } = await fetchShortTermInsightsInner(range);
+    const { aggregated } = await fetchShortTermInsightsInner(range, shelterId);
     if (aggregated.total === 0) {
       return {
         ok: false,
