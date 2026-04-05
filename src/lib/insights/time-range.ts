@@ -55,3 +55,28 @@ export function parseShortTimeRange(
   if (raw === "1h" || raw === "6h" || raw === "today") return raw;
   return "today";
 }
+
+/** Long dashboard windows (calendar weeks in staff TZ). */
+export type LongTimeRange = "1w" | "2w";
+
+export function getLongRangeBounds(range: LongTimeRange): {
+  since: string;
+  until: string;
+  label: string;
+} {
+  const until = new Date();
+  const dayMs = 24 * 3600_000;
+  const days = range === "1w" ? 7 : 14;
+  const since = new Date(until.getTime() - days * dayMs);
+  const label = range === "1w" ? "Last week" : "Last 2 weeks";
+  return {
+    since: since.toISOString(),
+    until: until.toISOString(),
+    label,
+  };
+}
+
+export function parseLongTimeRange(raw: string | undefined): LongTimeRange {
+  if (raw === "1w") return "1w";
+  return "2w";
+}

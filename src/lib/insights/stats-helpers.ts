@@ -47,3 +47,40 @@ export function padStatSlots(rows: StatRow[], slots: number): (StatRow | null)[]
   while (out.length < slots) out.push(null);
   return out;
 }
+
+/** Likert / fixed-order rows: percentages sum to 100% over non-empty totals. */
+export function likertDistributionRows(
+  counts: OptionCount,
+  orderedLabels: readonly string[],
+): StatRow[] {
+  const total = orderedLabels.reduce((s, l) => s + (counts[l] ?? 0), 0);
+  return orderedLabels.map((label) => {
+    const count = counts[label] ?? 0;
+    return {
+      label,
+      count,
+      pct: total > 0 ? Math.round((count / total) * 100) : 0,
+    };
+  });
+}
+
+export type DominantStat = { label: string; count: number; pct: number };
+
+/** Mode for dashboards: highest count, tie-break by first in `orderedLabels`. */
+export function dominantOption(
+  counts: OptionCount,
+  orderedLabels: readonly string[],
+): DominantStat | null {
+  let best: DominantStat | null = null;
+  const total = orderedLabels.reduce((s, l) => s + (counts[l] ?? 0), 0);
+  if (total === 0) return null;
+  for (const label of orderedLabels) {
+    const count = counts[label] ?? 0;
+    if (count === 0) continue;
+    const pct = Math.round((count / total) * 100);
+    if (!best || count > best.count) {
+      best = { label, count, pct };
+    }
+  }
+  return best;
+}
