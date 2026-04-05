@@ -1,20 +1,19 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import { WellnessBrandLogo } from "@/components/wellness-brand-logo";
 import {
-  LONG_FOLLOWUP_QUESTIONS,
-  MOOD_OPTIONS,
-  SHORT_FOLLOWUP_QUESTIONS,
+  getMoodOptions,
+  getShortQuestions,
+  getLongQuestions,
   type WellnessQuestion,
 } from "./wellness-questions";
+import { LanguageSwitcher } from "./language-switcher";
 
 /** Thanks screen visible time before fade-out (ms). */
 const THANKS_VISIBLE_MS = 2400;
 const THANKS_FADE_MS = 500;
-
-const ANONYMOUS_LINE =
-  "Your response is anonymous and helps us provide better care.";
 
 type Phase =
   | "access"
@@ -33,17 +32,19 @@ function MultiselectQuestion({
   question,
   selected,
   onToggle,
+  optionalLabel,
 }: {
   question: WellnessQuestion;
   selected: string[];
   onToggle: (option: string) => void;
+  optionalLabel: string;
 }) {
   return (
     <fieldset className="flex flex-col gap-3">
       <legend className="mb-1 text-lg font-bold leading-snug text-[var(--kiosk-ink)]">
         {question.prompt}
       </legend>
-      <p className="sr-only">Optional. Select any that apply.</p>
+      <p className="sr-only">{optionalLabel}</p>
       <ul className="flex flex-col gap-3">
         {question.options.map((opt) => {
           const isOn = selected.includes(opt);
@@ -83,17 +84,19 @@ function ShortQuestionMoodGrid({
   question,
   selected,
   onToggle,
+  anonymousLine,
 }: {
   question: WellnessQuestion;
   selected: string[];
   onToggle: (option: string) => void;
+  anonymousLine: string;
 }) {
   return (
     <>
       <h1 className="text-center text-2xl font-bold leading-tight">
         {question.prompt}
       </h1>
-      <p className="mt-3 text-center text-base opacity-90">{ANONYMOUS_LINE}</p>
+      <p className="mt-3 text-center text-base opacity-90">{anonymousLine}</p>
       <div className="mt-6 grid grid-cols-2 gap-4">
         {question.options.map((opt) => {
           const on = selected.includes(opt);
@@ -123,7 +126,14 @@ function ShortQuestionMoodGrid({
   );
 }
 
-export function KioskWellnessFlow() {
+export function KioskWellnessFlow({ locale }: { locale: string }) {
+  const t = useTranslations();
+
+  const MOOD_OPTIONS = getMoodOptions(t);
+  const SHORT_FOLLOWUP_QUESTIONS = getShortQuestions(t);
+  const LONG_FOLLOWUP_QUESTIONS = getLongQuestions(t);
+
+  const [logoFailed, setLogoFailed] = useState(false);
   const [phase, setPhase] = useState<Phase>("access");
   const [accessInput, setAccessInput] = useState("");
 
@@ -161,8 +171,8 @@ export function KioskWellnessFlow() {
       return;
     }
     setThanksFadeOut(false);
-    const t = window.setTimeout(() => setThanksFadeOut(true), THANKS_VISIBLE_MS);
-    return () => window.clearTimeout(t);
+    const timer = window.setTimeout(() => setThanksFadeOut(true), THANKS_VISIBLE_MS);
+    return () => window.clearTimeout(timer);
   }, [phase]);
 
   useEffect(() => {
@@ -219,55 +229,33 @@ export function KioskWellnessFlow() {
       <header className="flex shrink-0 items-center gap-3 px-5 pb-3 pt-5">
         <WellnessBrandLogo />
         <span className="text-lg font-bold tracking-tight text-[var(--kiosk-ink)]">
-          Wellness Check-In
+          {t("WellnessFlow.headerTitle")}
         </span>
       </header>
     ),
-    [],
-  );
-
-  const languageFooter = (
-    <footer className="shrink-0 border-t border-[var(--kiosk-ink)]/10 bg-[var(--kiosk-bg)]/95 px-2 py-3 backdrop-blur-sm">
-      <nav
-        aria-label="Language (English only; more languages later)"
-        className="flex flex-wrap items-center justify-center gap-2 sm:gap-3"
-      >
-        {["English", "English", "English", "English"].map((label, i) => (
-          <button
-            key={`${label}-${i}`}
-            type="button"
-            disabled
-            className="flex cursor-not-allowed items-center gap-2 rounded-full border border-[var(--kiosk-ink)]/15 bg-white/60 px-4 py-2 text-sm font-medium text-[var(--kiosk-ink)]/55 opacity-90"
-          >
-            <span aria-hidden className="text-base">
-              🇬🇧
-            </span>
-            {label}
-          </button>
-        ))}
-      </nav>
-    </footer>
+    [logoFailed, t],
   );
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-[var(--kiosk-bg)] text-[var(--kiosk-ink)]">
       {header}
       <main className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-y-contain px-5 pb-6">
+
         {phase === "access" && (
           <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center py-6">
             <h1 className="text-center text-2xl font-bold">
-              Enter Access Code:
+              {t("WellnessFlow.enterAccessCode")}
             </h1>
             <p className="mt-3 text-center text-base opacity-90">
-              Enter the shelter access code to setup device.
+              {t("WellnessFlow.accessCodeSubtitle")}
             </p>
             <label className="mt-8">
-              <span className="sr-only">Access code</span>
+              <span className="sr-only">{t("WellnessFlow.enterAccessCode")}</span>
               <input
                 type="text"
                 value={accessInput}
                 onChange={(e) => setAccessInput(e.target.value)}
-                placeholder="EX: WS139"
+                placeholder={t("WellnessFlow.accessCodePlaceholder")}
                 className="w-full rounded-[1.25rem] border-2 border-transparent bg-white px-5 py-4 text-lg text-[var(--kiosk-ink)] shadow-md placeholder:text-[var(--kiosk-ink)]/40 focus:border-[var(--kiosk-button)] focus:outline-none"
               />
             </label>
@@ -281,7 +269,7 @@ export function KioskWellnessFlow() {
               }}
               className="mx-auto mt-8 min-h-14 w-full max-w-xs rounded-[1.25rem] bg-[var(--kiosk-button)] text-lg font-semibold text-white shadow-md active:scale-[0.99]"
             >
-              Enter
+              {t("WellnessFlow.enter")}
             </button>
           </div>
         )}
@@ -291,15 +279,13 @@ export function KioskWellnessFlow() {
             className={`mx-auto w-full max-w-lg flex-1 py-3 transition-opacity ease-out ${
               moodEnter ? "opacity-100" : "opacity-0"
             }`}
-            style={{
-              transitionDuration: `${THANKS_FADE_MS}ms`,
-            }}
+            style={{ transitionDuration: `${THANKS_FADE_MS}ms` }}
           >
             <h1 className="text-center text-2xl font-bold leading-tight">
-              How are you feeling right now?
+              {t("WellnessFlow.moodQuestion")}
             </h1>
             <p className="mt-3 text-center text-base opacity-90">
-              {ANONYMOUS_LINE}
+              {t("WellnessFlow.anonymousLine")}
             </p>
             <div className="mt-6 grid grid-cols-2 gap-4">
               {MOOD_OPTIONS.map((m) => {
@@ -332,14 +318,14 @@ export function KioskWellnessFlow() {
                 onClick={() => setPhase("thanks")}
                 className="min-h-14 min-w-0 flex-1 rounded-[1.25rem] bg-[var(--kiosk-button)] text-base font-semibold text-white shadow-md sm:text-lg"
               >
-                Send Response
+                {t("WellnessFlow.sendResponse")}
               </button>
               <button
                 type="button"
                 onClick={goToTellUsMore}
                 className="min-h-14 min-w-0 flex-1 rounded-[1.25rem] bg-[var(--kiosk-button-2)] text-base font-semibold text-white shadow-md sm:text-lg"
               >
-                Tell us more →
+                {t("WellnessFlow.tellUsMore")}
               </button>
             </div>
           </div>
@@ -347,9 +333,11 @@ export function KioskWellnessFlow() {
 
         {phase === "pick-followup" && (
           <div className="mx-auto w-full max-w-lg flex-1 py-4">
-            <h1 className="text-center text-2xl font-bold">Tell us more!</h1>
+            <h1 className="text-center text-2xl font-bold">
+              {t("WellnessFlow.tellUsMoreTitle")}
+            </h1>
             <p className="mt-3 text-center text-base opacity-90">
-              {ANONYMOUS_LINE}
+              {t("WellnessFlow.anonymousLine")}
             </p>
             <div className="mt-8 flex flex-col gap-5">
               <button
@@ -367,10 +355,10 @@ export function KioskWellnessFlow() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="text-lg font-bold leading-tight text-[var(--kiosk-ink)] sm:text-xl">
-                    Answer 3 quick questions…
+                    {t("WellnessFlow.shortQuestionsLabel")}
                   </p>
                   <p className="mt-2 text-sm font-normal leading-snug text-[var(--kiosk-ink)]/90 sm:text-base">
-                    to tell us more about how you feel right now
+                    {t("WellnessFlow.shortQuestionsSubtitle")}
                   </p>
                 </div>
               </button>
@@ -386,11 +374,10 @@ export function KioskWellnessFlow() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="text-lg font-bold leading-tight text-[var(--kiosk-ink)] sm:text-xl">
-                    Answer 6 questions…
+                    {t("WellnessFlow.longQuestionsLabel")}
                   </p>
                   <p className="mt-2 text-sm font-normal leading-snug text-[var(--kiosk-ink)]/90 sm:text-base">
-                    to tell us more about how you&apos;ve been feeling in this
-                    past week
+                    {t("WellnessFlow.longQuestionsSubtitle")}
                   </p>
                 </div>
               </button>
@@ -400,20 +387,21 @@ export function KioskWellnessFlow() {
 
         {phase === "post-followup" && (
           <div className="mx-auto w-full max-w-lg flex-1 py-4">
-            <h1 className="text-center text-2xl font-bold">Almost done</h1>
+            <h1 className="text-center text-2xl font-bold">
+              {t("WellnessFlow.almostDone")}
+            </h1>
             <p className="mt-3 text-center text-base opacity-90">
-              {ANONYMOUS_LINE}
+              {t("WellnessFlow.anonymousLine")}
             </p>
             <p className="mt-4 text-center text-sm leading-relaxed opacity-80">
-              Submit your responses now, or continue with the optional
-              questions you haven&apos;t answered yet.
+              {t("WellnessFlow.almostDoneSubtitle")}
             </p>
             <button
               type="button"
               onClick={() => setPhase("thanks")}
               className="mt-8 w-full min-h-16 rounded-[1.25rem] bg-[var(--kiosk-button)] text-lg font-semibold text-white shadow-md"
             >
-              Submit responses
+              {t("WellnessFlow.submitResponses")}
             </button>
             <div className="mt-6">
               {completedShort && !completedLong && (
@@ -429,11 +417,10 @@ export function KioskWellnessFlow() {
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-lg font-bold leading-tight text-[var(--kiosk-ink)] sm:text-xl">
-                      Answer 6 questions…
+                      {t("WellnessFlow.longQuestionsLabel")}
                     </p>
                     <p className="mt-2 text-sm font-normal leading-snug text-[var(--kiosk-ink)]/90 sm:text-base">
-                      to tell us more about how you&apos;ve been feeling in this
-                      past week
+                      {t("WellnessFlow.longQuestionsSubtitle")}
                     </p>
                   </div>
                 </button>
@@ -454,10 +441,10 @@ export function KioskWellnessFlow() {
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-lg font-bold leading-tight text-[var(--kiosk-ink)] sm:text-xl">
-                      Answer 3 quick questions…
+                      {t("WellnessFlow.shortQuestionsLabel")}
                     </p>
                     <p className="mt-2 text-sm font-normal leading-snug text-[var(--kiosk-ink)]/90 sm:text-base">
-                      to tell us more about how you feel right now
+                      {t("WellnessFlow.shortQuestionsSubtitle")}
                     </p>
                   </div>
                 </button>
@@ -472,6 +459,7 @@ export function KioskWellnessFlow() {
               question={currentShortQ}
               selected={answers[currentShortQ.id] ?? []}
               onToggle={(opt) => toggleAnswer(currentShortQ.id, opt)}
+              anonymousLine={t("WellnessFlow.anonymousLine")}
             />
             <div className="mt-10 flex flex-wrap gap-3">
               <button
@@ -485,7 +473,7 @@ export function KioskWellnessFlow() {
                 }}
                 className="min-h-12 flex-1 rounded-[1.25rem] bg-[var(--kiosk-button-2)] px-6 font-semibold text-white"
               >
-                Skip
+                {t("WellnessFlow.skip")}
               </button>
               <button
                 type="button"
@@ -499,8 +487,8 @@ export function KioskWellnessFlow() {
                 className="min-h-12 flex-1 rounded-[1.25rem] bg-[var(--kiosk-button)] px-6 font-semibold text-white"
               >
                 {shortIndex < SHORT_FOLLOWUP_QUESTIONS.length - 1
-                  ? "Next"
-                  : "Finish"}
+                  ? t("WellnessFlow.next")
+                  : t("WellnessFlow.finish")}
               </button>
             </div>
           </div>
@@ -508,10 +496,11 @@ export function KioskWellnessFlow() {
 
         {phase === "long" && (
           <div className="mx-auto w-full max-w-lg flex-1 pb-6">
-            <h1 className="text-2xl font-bold">A few more questions</h1>
+            <h1 className="text-2xl font-bold">
+              {t("WellnessFlow.aFewMoreQuestions")}
+            </h1>
             <p className="mt-2 text-base opacity-90">
-              All optional — select any answers that apply. Scroll to the bottom
-              to submit.
+              {t("WellnessFlow.longFormSubtitle")}
             </p>
             <div className="mt-8 flex flex-col gap-12 rounded-[1.25rem] border border-[var(--kiosk-ink)]/10 bg-white/40 p-6 shadow-inner">
               {LONG_FOLLOWUP_QUESTIONS.map((q) => (
@@ -520,6 +509,7 @@ export function KioskWellnessFlow() {
                   question={q}
                   selected={answers[q.id] ?? []}
                   onToggle={(opt) => toggleAnswer(q.id, opt)}
+                  optionalLabel={t("WellnessFlow.optionalSelectAny")}
                 />
               ))}
             </div>
@@ -528,7 +518,7 @@ export function KioskWellnessFlow() {
               onClick={finishLongFlow}
               className="mt-8 w-full min-h-14 rounded-[1.25rem] bg-[var(--kiosk-button)] text-lg font-semibold text-white shadow-md"
             >
-              Submit responses
+              {t("WellnessFlow.submitResponses")}
             </button>
           </div>
         )}
@@ -538,20 +528,23 @@ export function KioskWellnessFlow() {
             className={`mx-auto flex w-full max-w-md flex-1 flex-col justify-center py-10 text-center transition-opacity ease-out ${
               thanksFadeOut ? "opacity-0" : "opacity-100"
             }`}
-            style={{
-              transitionDuration: `${THANKS_FADE_MS}ms`,
-            }}
+            style={{ transitionDuration: `${THANKS_FADE_MS}ms` }}
             onTransitionEnd={onThanksOpacityTransitionEnd}
           >
-            <h1 className="text-2xl font-bold">Thanks for checking in!</h1>
+            <h1 className="text-2xl font-bold">{t("WellnessFlow.thanks")}</h1>
             <p className="mt-4 text-lg opacity-90">
-              Your response was recorded.
+              {t("WellnessFlow.responseRecorded")}
             </p>
           </div>
         )}
 
       </main>
-      {languageFooter}
+
+      <footer className="shrink-0 border-t border-[var(--kiosk-ink)]/10 bg-[var(--kiosk-bg)]/95 px-2 py-3 backdrop-blur-sm">
+        <nav className="flex flex-wrap items-center justify-center gap-2 sm:gap-3">
+          <LanguageSwitcher current={locale} />
+        </nav>
+      </footer>
     </div>
   );
 }
