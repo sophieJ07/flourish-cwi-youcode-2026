@@ -7,8 +7,8 @@ import type { LongInsightsSnapshot } from "@/lib/insights/long-term-insights";
 import type { ShortInsightsSnapshot } from "@/lib/insights/short-term-insights";
 import {
   padStatSlots,
+  type MeanLikertStat,
   type StatRow,
-  type DominantStat,
 } from "@/lib/insights/stats-helpers";
 import type { LongTimeRange, ShortTimeRange } from "@/lib/insights/time-range";
 
@@ -80,19 +80,19 @@ type Props = {
   aiConfigured: boolean;
 };
 
-function DominantRingCard({
+function MeanLikertRingCard({
   title,
-  dominant,
+  summary,
 }: {
   title: string;
-  dominant: DominantStat | null;
+  summary: MeanLikertStat | null;
 }) {
-  const pct = dominant?.pct ?? 0;
+  const arc = summary?.arcPct ?? 0;
   const size = 176;
   const stroke = 11;
   const r = (size - stroke) / 2;
   const c = 2 * Math.PI * r;
-  const dash = Math.max(0.01, (pct / 100) * c);
+  const dash = Math.max(0.01, (arc / 100) * c);
   const gap = c - dash;
 
   return (
@@ -127,13 +127,13 @@ function DominantRingCard({
               fill="none"
               className="stroke-[var(--staff-accent)]"
               strokeWidth={stroke}
-              strokeDasharray={dominant ? `${dash} ${gap}` : `0 ${c}`}
+              strokeDasharray={summary ? `${dash} ${gap}` : `0 ${c}`}
               strokeLinecap="round"
             />
           </svg>
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
             <p className="max-w-[9.5rem] px-2 text-center text-sm font-bold leading-tight text-[var(--staff-ink)]">
-              {dominant ? dominant.label : "—"}
+              {summary ? summary.label : "—"}
             </p>
           </div>
         </div>
@@ -354,9 +354,9 @@ export function StaffInsightsDashboard({
                   Mind
                 </h2>
                 <div className="mt-5 grid gap-4 md:grid-cols-2 md:gap-5">
-                  <DominantRingCard
+                  <MeanLikertRingCard
                     title={longSnapshot.copy.stressLeadIn}
-                    dominant={longSnapshot.stressDominant}
+                    summary={longSnapshot.stressMean}
                   />
                   <DistributionBars
                     title={longSnapshot.copy.hopefulLeadIn}
@@ -390,9 +390,9 @@ export function StaffInsightsDashboard({
                   Soul
                 </h2>
                 <div className="mt-5 grid gap-4 md:grid-cols-2 md:gap-5">
-                  <DominantRingCard
+                  <MeanLikertRingCard
                     title={longSnapshot.copy.belongingLeadIn}
-                    dominant={longSnapshot.belongingDominant}
+                    summary={longSnapshot.belongingMean}
                   />
                   <div className={SECTION_PANEL}>
                     <h3 className="text-base font-bold text-[var(--staff-ink)]">

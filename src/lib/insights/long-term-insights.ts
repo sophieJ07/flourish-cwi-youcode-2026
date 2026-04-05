@@ -10,11 +10,11 @@ import {
 } from "./questions";
 import { getLongRangeBounds, type LongTimeRange } from "./time-range";
 import {
-  dominantOption,
   likertDistributionRows,
+  meanLikertSummary,
   topOptionsFromCounts,
+  type MeanLikertStat,
   type StatRow,
-  type DominantStat,
 } from "./stats-helpers";
 
 const LQ1_ORDER = Object.values(LQ1_OPTIONS);
@@ -25,11 +25,11 @@ export type LongInsightsSnapshot = {
   total: number;
   rangeKey: LongTimeRange;
   rangeLabel: string;
-  stressDominant: DominantStat | null;
+  stressMean: MeanLikertStat | null;
   hopefulDistribution: StatRow[];
   physicalTop: StatRow[];
   foodDistribution: StatRow[];
-  belongingDominant: DominantStat | null;
+  belongingMean: MeanLikertStat | null;
   programsTop: StatRow[];
   copy: {
     stressLeadIn: string;
@@ -76,7 +76,7 @@ export async function fetchLongTermInsightsInner(
     total,
     rangeKey: range,
     rangeLabel: label,
-    stressDominant: dominantOption(lq1Count, LQ1_ORDER),
+    stressMean: meanLikertSummary(lq1Count, LQ1_ORDER),
     hopefulDistribution: likertDistributionRows(lq2Count, LQ2_ORDER),
     physicalTop: topOptionsFromCounts(
       lq3Count,
@@ -84,7 +84,7 @@ export async function fetchLongTermInsightsInner(
       5,
     ).slice(0, 3),
     foodDistribution: likertDistributionRows(lq4Count, LQ4_ORDER),
-    belongingDominant: dominantOption(lq5Count, LQ5_ORDER),
+    belongingMean: meanLikertSummary(lq5Count, LQ5_ORDER),
     programsTop: topOptionsFromCounts(
       lq6Count,
       lq6Den > 0 ? lq6Den : 1,

@@ -84,3 +84,36 @@ export function dominantOption(
   }
   return best;
 }
+
+/** Likert 1..n: first option = 1, …, last = n. Label = option whose step is nearest the mean (rounded). */
+export type MeanLikertStat = {
+  label: string;
+  mean: number;
+  /** Ring fill 0–100: mean as a fraction of the top-of-scale (n). */
+  arcPct: number;
+};
+
+export function meanLikertSummary(
+  counts: OptionCount,
+  orderedLabels: readonly string[],
+): MeanLikertStat | null {
+  const n = orderedLabels.length;
+  if (n === 0) return null;
+
+  let weighted = 0;
+  let total = 0;
+  for (let i = 0; i < n; i++) {
+    const label = orderedLabels[i]!;
+    const c = counts[label] ?? 0;
+    weighted += (i + 1) * c;
+    total += c;
+  }
+  if (total === 0) return null;
+
+  const mean = weighted / total;
+  const rounded = Math.min(n, Math.max(1, Math.round(mean)));
+  const label = orderedLabels[rounded - 1]!;
+  const arcPct = (mean / n) * 100;
+
+  return { label, mean, arcPct };
+}
