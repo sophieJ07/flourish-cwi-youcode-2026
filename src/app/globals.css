@@ -1,8 +1,11 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Keep document colors aligned with the wellness palette. A plain
+   * `prefers-color-scheme: dark` flip on --background/--foreground
+   * (Next default) fights --wellness-* and makes the UI look discolored
+   * when the OS is in dark mode. */
+  color-scheme: light;
 
   /* Kiosk + staff laptop — single palette */
   --wellness-bg: #f8eaed;
@@ -11,6 +14,9 @@
   --wellness-accent-2: #3d2822;
   --wellness-input-fill: #e6dfe3;
   --wellness-surface: #ffffff;
+
+  --background: var(--wellness-bg);
+  --foreground: var(--wellness-ink);
 }
 
 @theme inline {
@@ -18,13 +24,6 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 body {
