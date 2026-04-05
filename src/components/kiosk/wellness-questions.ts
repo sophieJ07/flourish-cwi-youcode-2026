@@ -94,10 +94,10 @@ export function getShortQuestions(t: TFunction): WellnessQuestion[] {
 const LONG_IDS = ["long-1", "long-2", "long-3", "long-4", "long-5", "long-6"];
 const LONG_OPT_COUNTS: Record<string, number> = {
   "long-1": 5,
-  "long-2": 6,
+  "long-2": 5,
   "long-3": 5,
-  "long-4": 6,
-  "long-5": 6,
+  "long-4": 5,
+  "long-5": 5,
   "long-6": 5,
 };
 
