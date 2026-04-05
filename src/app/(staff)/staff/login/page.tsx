@@ -6,7 +6,7 @@ import { safeInternalPath } from "@/lib/safe-redirect";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
-  title: "Staff sign in",
+  title: "Sign in",
 };
 
 type Props = {
