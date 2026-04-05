@@ -1,0 +1,33 @@
+[
+  {
+    "shelter_id": "S001",
+    "timestamp": "2026-04-03T18:20:00Z",
+    "stress": "Quite a bit stressful",
+    "hopefulness": "A few days",
+    "body_felt": [
+      "Tired",
+      "Sore"
+    ],
+    "food_access": "Bad",
+    "belonging": "Somewhat weak",
+    "programs": [
+      "Art or craft workshops",
+      "Meditation, prayer, or spiritual circles"
+    ]
+  },
+  {
+    "shelter_id": "S037",
+    "timestamp": "2026-04-03T19:10:00Z",
+    "stress": "A bit stressful",
+    "hopefulness": "Most days",
+    "body_felt": [
+      "Energetic"
+    ],
+    "food_access": "Good",
+    "belonging": "Somewhat strong",
+    "programs": [
+      "Cultural celebration days",
+      "Activities for mothers & children"
+    ]
+  }
+]
