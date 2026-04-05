@@ -7,9 +7,15 @@ import {
   getMoodOptions,
   getShortQuestions,
   getLongQuestions,
+  moodLevelsFromSelection,
+  optionIndices1Based,
   type WellnessQuestion,
 } from "./wellness-questions";
 import { LanguageSwitcher } from "./language-switcher";
+import {
+  submitKioskWellnessCheckin,
+  validateKioskAccess,
+} from "@/app/actions/kiosk-checkin";
 
 /** Thanks screen visible time before fade-out (ms). */
 const THANKS_VISIBLE_MS = 2400;
@@ -155,6 +161,8 @@ export function KioskWellnessFlow({ locale }: { locale: string }) {
 
   const [phase, setPhase] = useState<Phase>("access");
   const [accessInput, setAccessInput] = useState("");
+  const [accessBusy, setAccessBusy] = useState(false);
+  const [accessError, setAccessError] = useState<string | null>(null);
 
   const [moodSelected, setMoodSelected] = useState<string[]>([]);
   const [shortIndex, setShortIndex] = useState(0);
@@ -164,12 +172,6 @@ export function KioskWellnessFlow({ locale }: { locale: string }) {
   const [completedLong, setCompletedLong] = useState(false);
   const completedShortRef = useRef(false);
   const completedLongRef = useRef(false);
-  useEffect(() => {
-    completedShortRef.current = completedShort;
-  }, [completedShort]);
-  useEffect(() => {
-    completedLongRef.current = completedLong;
-  }, [completedLong]);
 
   const toggleAnswer = useCallback((qid: string, option: string) => {
     setAnswers((prev) => ({
@@ -225,6 +227,8 @@ export function KioskWellnessFlow({ locale }: { locale: string }) {
       if (e.target !== e.currentTarget) return;
       if (phase !== "thanks" || e.propertyName !== "opacity") return;
       if (!thanksFadeOut) return;
+      completedShortRef.current = false;
+      completedLongRef.current = false;
       setMoodSelected([]);
       setShortIndex(0);
       setAnswers({});
@@ -236,17 +240,64 @@ export function KioskWellnessFlow({ locale }: { locale: string }) {
     [phase, thanksFadeOut],
   );
 
+  const persistAndThanks = useCallback(async () => {
+    const code = accessInput.trim();
+    const moodLevels = moodLevelsFromSelection(moodSelected);
+    if (!code || moodLevels.length === 0) {
+      setPhase("thanks");
+      return;
+    }
+
+    const shortQs = getShortQuestions(t);
+    const longQs = getLongQuestions(t);
+    const shortDone = completedShortRef.current;
+    const longDone = completedLongRef.current;
+
+    const sqIdx = (id: string): number[] | null => {
+      if (!shortDone) return null;
+      const q = shortQs.find((x) => x.id === id);
+      if (!q) return null;
+      return optionIndices1Based(q, answers[id]);
+    };
+    const lqIdx = (id: string): number[] | null => {
+      if (!longDone) return null;
+      const q = longQs.find((x) => x.id === id);
+      if (!q) return null;
+      return optionIndices1Based(q, answers[id]);
+    };
+
+    const result = await submitKioskWellnessCheckin({
+      accessCode: code,
+      moodLevels,
+      shortSurveyCompleted: shortDone,
+      longSurveyCompleted: longDone,
+      sq1: sqIdx("short-1"),
+      sq2: sqIdx("short-2"),
+      sq3: sqIdx("short-3"),
+      lq1: lqIdx("long-1"),
+      lq2: lqIdx("long-2"),
+      lq3: lqIdx("long-3"),
+      lq4: lqIdx("long-4"),
+      lq5: lqIdx("long-5"),
+      lq6: lqIdx("long-6"),
+    });
+    if (!result.ok) console.error("kiosk check-in failed", result.error);
+    setPhase("thanks");
+  }, [accessInput, moodSelected, answers, t]);
+
   const finishShortFlow = useCallback(() => {
+    completedShortRef.current = true;
     setCompletedShort(true);
-    if (completedLongRef.current) setPhase("thanks");
+    if (completedLongRef.current) void persistAndThanks();
     else setPhase("post-followup");
-  }, []);
+  }, [persistAndThanks]);
 
   const finishLongFlow = useCallback(() => {
+    completedLongRef.current = true;
     setCompletedLong(true);
-    if (completedShortRef.current) setPhase("thanks");
+    if (completedShortRef.current) void persistAndThanks();
     else setPhase("post-followup");
-  }, []);
+  }, [persistAndThanks]);
 
   const goToTellUsMore = useCallback(() => {
     setCompletedShort(false);
@@ -290,15 +341,34 @@ export function KioskWellnessFlow({ locale }: { locale: string }) {
                 className="w-full rounded-[1.25rem] border-2 border-transparent bg-white px-5 py-4 text-lg text-[var(--kiosk-ink)] shadow-md placeholder:text-[var(--kiosk-ink)]/40 focus:border-[var(--kiosk-button)] focus:outline-none"
               />
             </label>
+            {accessError ? (
+              <p
+                className="mt-4 text-center text-sm text-red-700"
+                role="alert"
+              >
+                {accessError}
+              </p>
+            ) : null}
             <button
               type="button"
+              disabled={accessBusy}
               onClick={() => {
-                const code = accessInput.trim();
-                if (!code) return;
-                skipMoodFadeInRef.current = true;
-                setPhase("mood");
+                void (async () => {
+                  const code = accessInput.trim();
+                  if (!code) return;
+                  setAccessBusy(true);
+                  setAccessError(null);
+                  const res = await validateKioskAccess(code);
+                  setAccessBusy(false);
+                  if (!res.ok) {
+                    setAccessError("Code not recognized.");
+                    return;
+                  }
+                  skipMoodFadeInRef.current = true;
+                  setPhase("mood");
+                })();
               }}
-              className="mx-auto mt-8 min-h-14 w-full max-w-xs rounded-[1.25rem] bg-[var(--kiosk-button)] text-lg font-semibold text-white shadow-md active:scale-[0.99]"
+              className="mx-auto mt-8 min-h-14 w-full max-w-xs rounded-[1.25rem] bg-[var(--kiosk-button)] text-lg font-semibold text-white shadow-md active:scale-[0.99] disabled:opacity-60"
             >
               {t("WellnessFlow.enter")}
             </button>
@@ -352,15 +422,23 @@ export function KioskWellnessFlow({ locale }: { locale: string }) {
             <div className="mt-8 flex flex-row gap-3">
               <button
                 type="button"
-                onClick={() => setPhase("thanks")}
-                className="min-h-14 min-w-0 flex-1 rounded-[1.25rem] bg-[var(--kiosk-button)] text-base font-semibold text-white shadow-md sm:text-lg"
+                onClick={() => {
+                  if (moodSelected.length === 0) return;
+                  void persistAndThanks();
+                }}
+                className="min-h-14 min-w-0 flex-1 rounded-[1.25rem] bg-[var(--kiosk-button)] text-base font-semibold text-white shadow-md sm:text-lg disabled:opacity-50"
+                disabled={moodSelected.length === 0}
               >
                 {t("WellnessFlow.sendResponse")}
               </button>
               <button
                 type="button"
-                onClick={goToTellUsMore}
-                className="min-h-14 min-w-0 flex-1 rounded-[1.25rem] bg-[var(--kiosk-button-2)] text-base font-semibold text-white shadow-md sm:text-lg"
+                onClick={() => {
+                  if (moodSelected.length === 0) return;
+                  goToTellUsMore();
+                }}
+                className="min-h-14 min-w-0 flex-1 rounded-[1.25rem] bg-[var(--kiosk-button-2)] text-base font-semibold text-white shadow-md sm:text-lg disabled:opacity-50"
+                disabled={moodSelected.length === 0}
               >
                 {t("WellnessFlow.tellUsMore")}
               </button>
@@ -427,7 +505,7 @@ export function KioskWellnessFlow({ locale }: { locale: string }) {
             </p>
             <button
               type="button"
-              onClick={() => setPhase("thanks")}
+              onClick={() => void persistAndThanks()}
               className="mt-8 w-full min-h-16 rounded-[1.25rem] bg-[var(--kiosk-button)] text-lg font-semibold text-white shadow-md"
             >
               {t("WellnessFlow.submitResponses")}
