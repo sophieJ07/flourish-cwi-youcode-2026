@@ -75,6 +75,7 @@ type Props = {
   term: "short" | "long";
   range: ShortTimeRange;
   longRange: LongTimeRange;
+  shelterId: string;
   snapshot: ShortInsightsSnapshot | null;
   longSnapshot: LongInsightsSnapshot | null;
   aiConfigured: boolean;
@@ -209,6 +210,7 @@ export function StaffInsightsDashboard({
   term,
   range,
   longRange,
+  shelterId,
   snapshot,
   longSnapshot,
   aiConfigured,
@@ -224,7 +226,7 @@ export function StaffInsightsDashboard({
   const runAi = useCallback(() => {
     setAiError(null);
     startTransition(async () => {
-      const res = await generateStaffActivitySuggestions(range);
+      const res = await generateStaffActivitySuggestions(range, shelterId);
       if (!res.ok) {
         setAiResult(null);
         setAiError(res.error);
@@ -235,7 +237,7 @@ export function StaffInsightsDashboard({
         activities: res.data.suggested_activities,
       });
     });
-  }, [range]);
+  }, [range, shelterId]);
 
   const onToggleAi = (next: boolean) => {
     setAiOn(next);
@@ -254,10 +256,16 @@ export function StaffInsightsDashboard({
     r?: ShortTimeRange,
     lr?: LongTimeRange,
   ) => {
+    const p = new URLSearchParams();
+    p.set("shelter", shelterId);
     if (tab === "long") {
-      return `/staff/dashboard?term=long&lrange=${lr ?? longRange}`;
+      p.set("term", "long");
+      p.set("lrange", lr ?? longRange);
+    } else {
+      p.set("term", "short");
+      p.set("range", r ?? range);
     }
-    return `/staff/dashboard?term=short&range=${r ?? range}`;
+    return `/staff/dashboard?${p.toString()}`;
   };
 
   return (
@@ -295,7 +303,7 @@ export function StaffInsightsDashboard({
             ).map(([key, label]) => (
               <Link
                 key={key}
-                href={`/staff/dashboard?term=long&lrange=${key}`}
+                href={qs("long", range, key)}
                 className={`rounded-full border-2 px-4 py-2 text-base font-medium transition sm:px-5 sm:py-2.5 ${
                   longRange === key
                     ? "border-[var(--staff-accent)] bg-[var(--staff-card)] text-[var(--staff-accent)]"

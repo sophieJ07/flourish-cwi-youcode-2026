@@ -41,6 +41,7 @@ export type ShortTermInsightsData = {
 
 export async function fetchShortTermInsightsInner(
   range: ShortTimeRange,
+  shelterId: string,
 ): Promise<ShortTermInsightsData> {
   const supabase = await createServerSupabaseClient();
   const { since, until, label } = getRangeBounds(range);
@@ -50,6 +51,7 @@ export async function fetchShortTermInsightsInner(
     .select(
       "mood_level, short_survey_completed, long_survey_completed, sq1_answer, sq2_answer, sq3_answer, lq1_answer, lq2_answer, lq3_answer, lq4_answer, lq5_answer, lq6_answer",
     )
+    .eq("shelter_id", shelterId)
     .gte("created_at", since)
     .lte("created_at", until);
 

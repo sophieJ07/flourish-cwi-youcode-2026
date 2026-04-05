@@ -6,6 +6,7 @@ import { StaffShellHeader } from "@/components/staff/staff-shell-header";
 import { StaffInsightsDashboard } from "@/components/staff/staff-insights-dashboard";
 import { getLongTermInsightsData } from "@/lib/insights/long-term-insights";
 import { getShortTermInsightsData } from "@/lib/insights/short-term-insights";
+import { staffDashboardQuery } from "@/lib/staff/dashboard-search";
 import {
   parseLongTimeRange,
   parseShortTimeRange,
@@ -15,14 +16,12 @@ export const metadata: Metadata = {
   title: "Insights | Staff",
 };
 
-function shelterLocationPhrase(names: string[]): string {
-  if (names.length === 0) return "your shelter";
-  if (names.length === 1) return names[0];
-  if (names.length === 2) return `${names[0]} and ${names[1]}`;
-  return `${names.slice(0, -1).join(", ")}, and ${names[names.length - 1]}`;
-}
-
-type SearchParams = Promise<{ term?: string; range?: string; lrange?: string }>;
+type SearchParams = Promise<{
+  term?: string;
+  range?: string;
+  lrange?: string;
+  shelter?: string;
+}>;
 
 export default async function StaffDashboardPage({
   searchParams,
@@ -51,39 +50,72 @@ export default async function StaffDashboardPage({
     redirect("/staff/access-code");
   }
 
-  const { data: shelters } = await supabase
+  const { data: accessibleShelters } = await supabase
     .from("shelters")
-    .select("name")
+    .select("id, name")
     .order("name");
 
-  const shelterNames = (shelters ?? [])
-    .map((s) => s.name?.trim())
-    .filter((n): n is string => Boolean(n && n.length > 0));
+  const shelters = accessibleShelters ?? [];
+  const validIds = new Set(shelters.map((s) => s.id));
+  const requested = sp.shelter;
+  const selectedId =
+    requested && validIds.has(requested) ? requested : shelters[0]?.id;
 
-  const at = shelterLocationPhrase(shelterNames);
+  if (!selectedId) {
+    redirect("/staff/access-code");
+  }
+
+  if (!requested || !validIds.has(requested)) {
+    redirect(
+      staffDashboardQuery({
+        shelterId: selectedId,
+        term: sp.term,
+        range: sp.range,
+        lrange: sp.lrange,
+      }),
+    );
+  }
+
+  const currentName =
+    shelters.find((s) => s.id === selectedId)?.name?.trim() ?? "this shelter";
 
   const shortData =
-    term === "short" ? await getShortTermInsightsData(range) : null;
+    term === "short"
+      ? await getShortTermInsightsData(range, selectedId)
+      : null;
   const longData =
-    term === "long" ? await getLongTermInsightsData(longRange) : null;
+    term === "long"
+      ? await getLongTermInsightsData(longRange, selectedId)
+      : null;
 
   const aiConfigured =
     process.env.AI_PROVIDER === "claude" &&
     Boolean(process.env.ANTHROPIC_API_KEY);
 
+  const shelterOptions = shelters.map((s) => ({
+    id: s.id,
+    name: s.name ?? "",
+  }));
+
   return (
     <div className="flex min-h-dvh flex-col bg-[var(--staff-bg)] text-[var(--staff-ink)]">
-      <StaffShellHeader showProfileSlot profileSlot={<SignOutButton />} />
+      <StaffShellHeader
+        showProfileSlot
+        profileSlot={<SignOutButton />}
+        shelters={shelterOptions}
+        selectedShelterId={selectedId}
+      />
       <main className="mx-auto w-full max-w-4xl flex-1 px-6 py-8">
         <h1 className="text-center text-3xl font-bold leading-snug text-[var(--staff-ink)] sm:text-left sm:text-4xl">
-          Live wellness data at {at}
+          Live wellness data at {currentName}
         </h1>
 
         <StaffInsightsDashboard
-          key={`${term}-${range}-${longRange}`}
+          key={`${selectedId}-${term}-${range}-${longRange}`}
           term={term}
           range={range}
           longRange={longRange}
+          shelterId={selectedId}
           snapshot={shortData?.snapshot ?? null}
           longSnapshot={longData ?? null}
           aiConfigured={aiConfigured}
