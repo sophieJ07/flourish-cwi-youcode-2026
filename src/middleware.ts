@@ -52,7 +52,12 @@ export async function middleware(request: NextRequest) {
     if (!user) {
       const redirectUrl = request.nextUrl.clone();
       redirectUrl.pathname = STAFF_LOGIN;
-      redirectUrl.searchParams.set("next", pathname);
+      // `/staff` has no page; after login, `/staff/dashboard` applies shelter-access redirects.
+      const nextPath =
+        pathname === "/staff" || pathname === "/staff/"
+          ? "/staff/dashboard"
+          : pathname;
+      redirectUrl.searchParams.set("next", nextPath);
       return NextResponse.redirect(redirectUrl);
     }
   }
