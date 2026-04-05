@@ -65,6 +65,18 @@ export function moodLevelsFromSelection(selectedIds: string[]): number[] {
   return [...new Set(levels)].sort((a, b) => a - b);
 }
 
+/** Map selected option labels to 1-based indices for DB (matches staff aggregation keys). */
+export function optionIndices1Based(
+  q: WellnessQuestion,
+  selected: string[] | undefined,
+): number[] | null {
+  if (!selected?.length) return null;
+  const idxs = selected
+    .map((opt) => q.options.indexOf(opt) + 1)
+    .filter((n) => n >= 1);
+  return idxs.length ? idxs : null;
+}
+
 type TFunction = ReturnType<typeof useTranslations>;
 
 export function getMoodOptions(t: TFunction): MoodOption[] {
