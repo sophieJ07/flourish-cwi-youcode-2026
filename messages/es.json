@@ -31,12 +31,12 @@
     "optionalSelectAny": "Opcional. Selecciona todas las que apliquen."
   },
   "MoodOptions": {
-    "great": "Muy bien",
-    "good": "Bien",
+    "tired": "Cansada",
     "okay": "Más o menos",
-    "low": "Decaída",
-    "stressed": "Estresada",
-    "tired": "Cansada"
+    "great": "Muy bien",
+    "content": "Tranquila",
+    "upset": "Alterada",
+    "anxious": "Ansiosa"
   },
   "ShortQuestions": {
     "short-1-prompt": "¿Qué te ayudaría más hoy?",

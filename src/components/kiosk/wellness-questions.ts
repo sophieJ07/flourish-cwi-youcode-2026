@@ -6,17 +6,72 @@ export type WellnessQuestion = {
   options: string[];
 };
 
+/** First check-in moods — order defines stable level 1–6 for `mood_level` int[]. */
+export type MoodOption = {
+  id: string;
+  label: string;
+  /** Public URL under /public */
+  imageSrc: string;
+  /** Stored in DB (1-based index in this array). */
+  level: number;
+};
+
+export const MOOD_OPTIONS: MoodOption[] = [
+  {
+    id: "tired",
+    label: "Tired",
+    imageSrc: "/assets/mood/tired.png",
+    level: 1,
+  },
+  {
+    id: "okay",
+    label: "Okay",
+    imageSrc: "/assets/mood/okay.png",
+    level: 2,
+  },
+  {
+    id: "great",
+    label: "Great",
+    imageSrc: "/assets/mood/great.png",
+    level: 3,
+  },
+  {
+    id: "content",
+    label: "Content",
+    imageSrc: "/assets/mood/content.png",
+    level: 4,
+  },
+  {
+    id: "upset",
+    label: "Upset",
+    imageSrc: "/assets/mood/upset.png",
+    level: 5,
+  },
+  {
+    id: "anxious",
+    label: "Anxious",
+    imageSrc: "/assets/mood/anxious.png",
+    level: 6,
+  },
+];
+
+const moodLevelById = new Map(MOOD_OPTIONS.map((m) => [m.id, m.level]));
+
+/** Map selected mood tile ids to DB mood_level ints (multiselect). */
+export function moodLevelsFromSelection(selectedIds: string[]): number[] {
+  const levels = selectedIds
+    .map((id) => moodLevelById.get(id))
+    .filter((n): n is number => n != null);
+  return [...new Set(levels)].sort((a, b) => a - b);
+}
+
 type TFunction = ReturnType<typeof useTranslations>;
 
-export function getMoodOptions(t: TFunction) {
-  return [
-    { id: "great", label: t("MoodOptions.great") },
-    { id: "good", label: t("MoodOptions.good") },
-    { id: "okay", label: t("MoodOptions.okay") },
-    { id: "low", label: t("MoodOptions.low") },
-    { id: "stressed", label: t("MoodOptions.stressed") },
-    { id: "tired", label: t("MoodOptions.tired") },
-  ];
+export function getMoodOptions(t: TFunction): MoodOption[] {
+  return MOOD_OPTIONS.map((m) => ({
+    ...m,
+    label: t(`MoodOptions.${m.id}` as Parameters<TFunction>[0]),
+  }));
 }
 
 const SHORT_IDS = ["short-1", "short-2", "short-3"];

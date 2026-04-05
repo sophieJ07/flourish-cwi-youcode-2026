@@ -31,12 +31,12 @@
     "optionalSelectAny": "اختياري. اختاري أي إجابات تنطبق عليكِ."
   },
   "MoodOptions": {
-    "great": "ممتازة",
-    "good": "جيدة",
+    "tired": "متعبة",
     "okay": "لا بأس",
-    "low": "منخفضة",
-    "stressed": "متوترة",
-    "tired": "متعبة"
+    "great": "ممتازة",
+    "content": "مطمئنة",
+    "upset": "منزعجة",
+    "anxious": "قلقة"
   },
   "ShortQuestions": {
     "short-1-prompt": "ما الذي قد يساعدك أكثر اليوم؟",
