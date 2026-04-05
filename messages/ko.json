@@ -8,7 +8,7 @@
     "headerTitle": "Flourish: 건강 체크인",
     "enterAccessCode": "접속 코드를 입력하세요:",
     "accessCodeSubtitle": "기기를 설정하려면 쉼터 접속 코드를 입력하세요.",
-    "accessCodePlaceholder": "예: WS139",
+    "accessCodePlaceholder": "예: S001-123456",
     "enter": "입력",
     "moodQuestion": "지금 기분이 어떠세요?",
     "sendResponse": "응답 보내기",

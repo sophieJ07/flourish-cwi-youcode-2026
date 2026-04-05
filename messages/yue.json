@@ -8,7 +8,7 @@
     "headerTitle": "Flourish: 健康登記",
     "enterAccessCode": "輸入存取碼：",
     "accessCodeSubtitle": "輸入庇護站存取碼嚟設定裝置。",
-    "accessCodePlaceholder": "例如：WS139",
+    "accessCodePlaceholder": "例如：S001-123456",
     "enter": "輸入",
     "moodQuestion": "你而家感覺點？",
     "sendResponse": "送出回應",

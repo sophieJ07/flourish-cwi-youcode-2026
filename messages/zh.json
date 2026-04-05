@@ -8,7 +8,7 @@
     "headerTitle": "Flourish: 健康签到",
     "enterAccessCode": "请输入访问码：",
     "accessCodeSubtitle": "请输入庇护所的访问码来设置设备。",
-    "accessCodePlaceholder": "例如：WS139",
+    "accessCodePlaceholder": "例如：S001-123456",
     "enter": "确认",
     "moodQuestion": "您现在感觉怎么样？",
     "sendResponse": "发送回答",

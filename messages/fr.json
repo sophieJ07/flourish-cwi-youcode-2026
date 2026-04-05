@@ -8,7 +8,7 @@
     "headerTitle": "Flourish: Bilan de bien-être",
     "enterAccessCode": "Entrez le code d'accès :",
     "accessCodeSubtitle": "Entrez le code d'accès du refuge pour configurer l'appareil.",
-    "accessCodePlaceholder": "EX : WS139",
+    "accessCodePlaceholder": "EX : S001-123456",
     "enter": "Entrer",
     "moodQuestion": "Comment vous sentez-vous en ce moment ?",
     "sendResponse": "Envoyer la réponse",

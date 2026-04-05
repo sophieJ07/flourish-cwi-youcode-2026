@@ -84,7 +84,7 @@ export function StaffAccessCodeView({
               autoComplete="off"
               value={code}
               onChange={(e) => setCode(e.target.value)}
-              placeholder="EX: W8139"
+              placeholder="EX: S001-123456"
               className="min-h-14 w-full rounded-xl border-0 bg-[var(--staff-input-bg)] px-4 text-center text-lg tracking-wide text-[var(--staff-ink)] placeholder:text-[var(--staff-ink)]/45 focus:ring-2 focus:ring-[var(--staff-accent)]/40 focus:outline-none"
             />
           </label>

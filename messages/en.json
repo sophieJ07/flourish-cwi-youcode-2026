@@ -8,7 +8,7 @@
     "headerTitle": "Flourish: Wellness Check-In",
     "enterAccessCode": "Enter Access Code:",
     "accessCodeSubtitle": "Enter the shelter access code to setup device.",
-    "accessCodePlaceholder": "EX: WS139",
+    "accessCodePlaceholder": "EX: S001-123456",
     "enter": "Enter",
     "moodQuestion": "How are you feeling right now?",
     "sendResponse": "Send Response",

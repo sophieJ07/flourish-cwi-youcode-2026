@@ -8,7 +8,7 @@
     "headerTitle": "Flourish: ウェルネス チェックイン",
     "enterAccessCode": "アクセスコードを入力してください：",
     "accessCodeSubtitle": "デバイスを設定するために、シェルターのアクセスコードを入力してください。",
-    "accessCodePlaceholder": "例：WS139",
+    "accessCodePlaceholder": "例：S001-123456",
     "enter": "入力",
     "moodQuestion": "今の気分はいかがですか？",
     "sendResponse": "回答を送信",
