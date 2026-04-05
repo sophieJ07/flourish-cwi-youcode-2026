@@ -131,16 +131,12 @@ function ShortQuestionMoodGrid({
               key={opt}
               type="button"
               onClick={() => onToggle(opt)}
-              className={`flex min-h-[6.5rem] flex-col items-center justify-center gap-2 rounded-[1.25rem] border-2 bg-white px-2 py-3 text-center shadow-sm transition-colors sm:min-h-[7rem] sm:px-3 ${
+              className={`flex min-h-[6.5rem] flex-col items-center justify-center rounded-[1.25rem] border-2 bg-white px-3 py-4 text-center shadow-sm transition-colors sm:min-h-[7rem] sm:px-4 ${
                 on
                   ? "border-[var(--kiosk-button)] ring-2 ring-[var(--kiosk-button)]/25"
                   : "border-transparent hover:border-[var(--kiosk-ink)]/10"
               }`}
             >
-              <span
-                className="h-11 w-11 shrink-0 rounded-full bg-neutral-300/80"
-                aria-hidden
-              />
               <span className="text-sm font-semibold leading-snug sm:text-base">
                 {opt}
               </span>
